@@ -451,6 +451,8 @@ func Test14(t *testing.T) {
 	index, length = IndexOf(matcher2, "A", "A", false, 0)
 	assert.Equal(t, -1, index)
 	assert.Equal(t, -1, length)
+	
+	FreeConfusableMatcher(matcher)
 }
 
 func Test15(t *testing.T) {
@@ -475,4 +477,6 @@ func Test15(t *testing.T) {
 	assert.Equal(t, AddMapping(matcher, "A\x01", "A\x00", false), Success)
 	assert.Equal(t, AddMapping(matcher, "A\x00", "A\x00", false), Success)
 	assert.Equal(t, AddMapping(matcher, "A\x01", "A\x01", false), Success)
+	
+	FreeConfusableMatcher(matcher)
 }
