@@ -1,1 +1,0 @@
-dlltool --def ConfusableMatcher/ConfusableMatcher.def --output-lib libconfusablematcher.a --dllname ConfusableMatcher.dll ConfusableMatcher.dll

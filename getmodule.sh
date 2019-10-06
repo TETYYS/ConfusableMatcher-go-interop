@@ -1,0 +1,1 @@
+cp ConfusableMatcher/bin/libconfusablematcher.a .

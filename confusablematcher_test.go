@@ -2,6 +2,7 @@ package confusablematcher
 
 import "testing"
 import "gotest.tools/assert"
+import "time"
 
 func Test1(t *testing.T) {
 	var inMap []KeyValue
@@ -281,7 +282,7 @@ func Test9(t *testing.T) {
 
 	for x := 0; x < 1000; x++ {
 		var matcher = InitConfusableMatcher(inMap, true)
-		
+
 		index, length := IndexOf(matcher,
 			"NOT NICE",
 			"VERY NICE",
@@ -451,7 +452,7 @@ func Test14(t *testing.T) {
 	index, length = IndexOf(matcher2, "A", "A", false, 0)
 	assert.Equal(t, -1, index)
 	assert.Equal(t, -1, length)
-	
+
 	FreeConfusableMatcher(matcher)
 }
 
@@ -477,6 +478,29 @@ func Test15(t *testing.T) {
 	assert.Equal(t, AddMapping(matcher, "A\x01", "A\x00", false), Success)
 	assert.Equal(t, AddMapping(matcher, "A\x00", "A\x00", false), Success)
 	assert.Equal(t, AddMapping(matcher, "A\x01", "A\x01", false), Success)
-	
+
 	FreeConfusableMatcher(matcher)
+}
+
+func Test16(t *testing.T) {
+	var inMap []KeyValue
+	var running = true
+	var matcher = InitConfusableMatcher(inMap, true)
+
+	go func() {
+		for running {
+			IndexOf(matcher, "ASD", "ZXC", false, 0)
+		}
+	}()
+
+	go func() {
+		for running {
+			AddMapping(matcher, "Z", "A", false)
+			RemoveMapping(matcher, "Z", "A")
+		}
+	}()
+
+	time.Sleep(time.Second * 10)
+
+	running = false
 }
