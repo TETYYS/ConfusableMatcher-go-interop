@@ -4,9 +4,10 @@ package confusablematcher
 // #include <stdlib.h>
 // #cgo LDFLAGS: -L. -lconfusablematcher
 import "C"
-import "unsafe"
-
-//import "time"
+import (
+	"sync"
+	"unsafe"
+)
 
 // KeyValue Key and value structure
 type KeyValue struct {
@@ -18,6 +19,7 @@ type KeyValue struct {
 type CMHandle struct {
 	matcher    C.CMHandle
 	ignoreList C.CMListHandle
+	lock       sync.Mutex
 }
 
 // MappingResponse describes result returned by `AddMapping`
@@ -95,10 +97,6 @@ func FreeConfusableMatcher(Handle CMHandle) {
 //
 // - `In` : Input array of strings to set to ignore
 func SetIgnoreList(Handle *CMHandle, In []string) {
-	if (*Handle).ignoreList != nil {
-		C.FreeIgnoreList((*Handle).ignoreList)
-	}
-
 	var tmp *C.char
 	var ptrSz = int(unsafe.Sizeof(&tmp))
 	var list = (**C.char)(C.malloc((C.ulonglong)(len(In) * ptrSz)))
@@ -112,7 +110,14 @@ func SetIgnoreList(Handle *CMHandle, In []string) {
 		*((**C.char)(ptr)) = str
 	}
 
-	(*Handle).ignoreList = C.ConstructIgnoreList(list, (C.int)(len(In)))
+	(*Handle).lock.Lock()
+	{
+		if (*Handle).ignoreList != nil {
+			C.FreeIgnoreList((*Handle).ignoreList)
+		}
+		(*Handle).ignoreList = C.ConstructIgnoreList(list, (C.int)(len(In)))
+	}
+	(*Handle).lock.Unlock()
 }
 
 // IndexOf Performs an indexOf operation using specified mapping and ignore list
@@ -134,7 +139,12 @@ func IndexOf(Handle CMHandle, In string, Contains string, MatchRepeating bool, S
 	var containsPtr = C.CString(Contains)
 	defer C.free(unsafe.Pointer(containsPtr))
 
-	var ret = uint64(C.StringIndexOf(Handle.matcher, inPtr, containsPtr, (C.bool)(MatchRepeating), (C.int)(StartIndex), Handle.ignoreList))
+	var ret uint64
+	Handle.lock.Lock()
+	{
+		ret = uint64(C.StringIndexOf(Handle.matcher, inPtr, containsPtr, (C.bool)(MatchRepeating), (C.int)(StartIndex), Handle.ignoreList))
+	}
+	Handle.lock.Unlock()
 
 	return int(int32(ret & 0xFFFFFFFF)), int(int32(ret >> 32))
 }

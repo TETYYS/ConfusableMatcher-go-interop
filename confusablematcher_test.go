@@ -1,8 +1,12 @@
 package confusablematcher
 
-import "testing"
-import "gotest.tools/assert"
-import "time"
+import (
+	"sync"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+)
 
 func Test1(t *testing.T) {
 	var inMap []KeyValue
@@ -32,16 +36,16 @@ func Test2(t *testing.T) {
 
 	index, length = IndexOf(matcher, "VAVOVAVO", "VV", false, 0)
 	assert.Equal(t, index, 0)
-	assert.Assert(t, length == 3 || length == 4)
+	assert.True(t, length == 3 || length == 4)
 	index, length = IndexOf(matcher, "VAVOVAVO", "VV", false, 4)
 	assert.Equal(t, index, 4)
-	assert.Assert(t, length == 3 || length == 4)
+	assert.True(t, length == 3 || length == 4)
 	index, length = IndexOf(matcher, "VAVOVAVO", "VV", false, 2)
 	assert.Equal(t, index, 2)
-	assert.Assert(t, length == 3 || length == 4)
+	assert.True(t, length == 3 || length == 4)
 	index, length = IndexOf(matcher, "VAVOVAVO", "VV", false, 3)
 	assert.Equal(t, index, 4)
-	assert.Assert(t, length == 3 || length == 4)
+	assert.True(t, length == 3 || length == 4)
 	FreeConfusableMatcher(matcher)
 }
 
@@ -166,7 +170,7 @@ func Test7(t *testing.T) {
 	SetIgnoreList(&matcher, []string{"_", "%", "$"})
 	index, length := IndexOf(matcher, inp, "NIGGER", true, 0)
 
-	assert.Assert(t, (index == 64 && length == 57) || (index == 89 && length == 32))
+	assert.True(t, (index == 64 && length == 57) || (index == 89 && length == 32))
 
 	FreeConfusableMatcher(matcher)
 }
@@ -337,7 +341,7 @@ func Test10(t *testing.T) {
 		false,
 		0)
 	assert.Equal(t, 0, index)
-	assert.Assert(t, length >= 0 && length == 1)
+	assert.True(t, length >= 0 && length == 1)
 
 	RemoveMapping(matcher, "B", "ABCDEFGHIJKLMNOP")
 	AddMapping(matcher, "B", "P", false)
@@ -376,7 +380,7 @@ func Test10(t *testing.T) {
 		true,
 		0)
 	assert.Equal(t, 0, index)
-	assert.Assert(t, length >= 0 && length == 547)
+	assert.True(t, length >= 0 && length == 547)
 
 	FreeConfusableMatcher(matcher)
 }
@@ -462,18 +466,18 @@ func Test15(t *testing.T) {
 	var matcher = InitConfusableMatcher(inMap, true)
 	assert.Equal(t, AddMapping(matcher, "", "?", false), EmptyKey)
 	assert.Equal(t, AddMapping(matcher, "?", "", false), EmptyValue)
-	assert.Assert(t, AddMapping(matcher, "", "", false) != Success)
-	assert.Assert(t, AddMapping(matcher, "\x00\x01", "?", false) != Success)
-	assert.Assert(t, AddMapping(matcher, "?", "\x00", false) != Success)
+	assert.True(t, AddMapping(matcher, "", "", false) != Success)
+	assert.True(t, AddMapping(matcher, "\x00\x01", "?", false) != Success)
+	assert.True(t, AddMapping(matcher, "?", "\x00", false) != Success)
 	assert.Equal(t, AddMapping(matcher, "\x01", "?", false), InvalidKey)
 	assert.Equal(t, AddMapping(matcher, "?", "\x01", false), InvalidValue)
-	assert.Assert(t, AddMapping(matcher, "\x00", "\x01", false) != Success)
-	assert.Assert(t, AddMapping(matcher, "\x00", "\x00", false) != Success)
-	assert.Assert(t, AddMapping(matcher, "\x01", "\x00", false) != Success)
-	assert.Assert(t, AddMapping(matcher, "\x01", "\x01", false) != Success)
-	assert.Assert(t, AddMapping(matcher, "\x01\x00", "\x00\x01", false) != Success)
-	assert.Assert(t, AddMapping(matcher, "A\x00", "\x00A", false) != Success)
-	assert.Assert(t, AddMapping(matcher, "\x01\x00", "\x00\x01", false) != Success)
+	assert.True(t, AddMapping(matcher, "\x00", "\x01", false) != Success)
+	assert.True(t, AddMapping(matcher, "\x00", "\x00", false) != Success)
+	assert.True(t, AddMapping(matcher, "\x01", "\x00", false) != Success)
+	assert.True(t, AddMapping(matcher, "\x01", "\x01", false) != Success)
+	assert.True(t, AddMapping(matcher, "\x01\x00", "\x00\x01", false) != Success)
+	assert.True(t, AddMapping(matcher, "A\x00", "\x00A", false) != Success)
+	assert.True(t, AddMapping(matcher, "\x01\x00", "\x00\x01", false) != Success)
 	assert.Equal(t, AddMapping(matcher, "A\x00", "A\x01", false), Success)
 	assert.Equal(t, AddMapping(matcher, "A\x01", "A\x00", false), Success)
 	assert.Equal(t, AddMapping(matcher, "A\x00", "A\x00", false), Success)
@@ -497,6 +501,41 @@ func Test16(t *testing.T) {
 		for running {
 			AddMapping(matcher, "Z", "A", false)
 			RemoveMapping(matcher, "Z", "A")
+		}
+	}()
+
+	time.Sleep(time.Second * 10)
+
+	running = false
+}
+
+func Test17(t *testing.T) {
+	var inMap []KeyValue
+	inMap = append(inMap, KeyValue{"N", "/\\/"})
+	var ignoreList []string
+	var matcher = InitConfusableMatcher(inMap, true)
+	var running = true
+	var lock sync.Mutex
+
+	go func() {
+		for running {
+			lock.Lock()
+			{
+				IndexOf(matcher, "/\\/", "N", false, 0)
+			}
+			lock.Unlock()
+		}
+	}()
+
+	go func() {
+		for running {
+			lock.Lock()
+			{
+				FreeConfusableMatcher(matcher)
+				matcher = InitConfusableMatcher(inMap, true)
+			}
+			lock.Unlock()
+			SetIgnoreList(&matcher, ignoreList)
 		}
 	}()
 
