@@ -2,7 +2,7 @@ package confusablematcher
 
 // #include "ConfusableMatcher/Export.h"
 // #include <stdlib.h>
-// #cgo LDFLAGS: -L. -lconfusablematcher
+// #cgo LDFLAGS: -L. -lconfusablematcher -lstdc++
 import "C"
 import (
 	"sync"
@@ -55,7 +55,7 @@ func InitConfusableMatcher(InputMap []KeyValue, AddDefaultValues bool) CMHandle 
 
 	var tmp C.CMKV
 	var structSz = int(unsafe.Sizeof(tmp))
-	cmMap.Kv = (*C.CMKV)(C.malloc((C.ulonglong)(len(InputMap) * structSz * 5)))
+	cmMap.Kv = (*C.CMKV)(C.malloc((C.ulong)(len(InputMap) * structSz * 5)))
 	defer C.free(unsafe.Pointer(cmMap.Kv))
 
 	for x, el := range InputMap {
@@ -99,7 +99,7 @@ func FreeConfusableMatcher(Handle CMHandle) {
 func SetIgnoreList(Handle *CMHandle, In []string) {
 	var tmp *C.char
 	var ptrSz = int(unsafe.Sizeof(&tmp))
-	var list = (**C.char)(C.malloc((C.ulonglong)(len(In) * ptrSz)))
+	var list = (**C.char)(C.malloc((C.ulong)(len(In) * ptrSz)))
 	defer C.free(unsafe.Pointer(list))
 
 	for x, el := range In {
